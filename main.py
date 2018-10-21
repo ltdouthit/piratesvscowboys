@@ -1,5 +1,4 @@
 import pyxel
-import time
 
 
 class Sprite:
