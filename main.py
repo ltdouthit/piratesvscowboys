@@ -1,5 +1,6 @@
 import pyxel
 from Agent import Agent
+from Rooms import Rooms
 
 
 class App:
@@ -15,14 +16,17 @@ class App:
         self.cowboy1_left = [0, 32, 0, 32, 32]  # Location, Size
         self.cowboy1_right = [0, 64, 0, 32, 32]  # Location, Size
         self.cowboy1_up = [0, 96, 0, 32, 32]  # Location, Size
-        pyxel.image(1).load(51*0, 0, "assets/background/Background1/test_bg0.png")
-        pyxel.image(1).load(51*1, 0, "assets/background/Background1/test_bg1.png")
-        pyxel.image(1).load(51*2, 0, "assets/background/Background1/test_bg2.png")
-        pyxel.image(1).load(51*3, 0, "assets/background/Background1/test_bg3.png")
-        pyxel.image(1).load(51*4, 0, "assets/background/Background1/test_bg4.png")
-        self.bg = [51*i for i in range(0, 5)]
-        self.deck = [1, 125, 0, 125, 100]
+        pyxel.image(1).load(51*0, 0, "assets/background/background/background0.png")
+        pyxel.image(1).load(51*1, 0, "assets/background/background/background1.png")
+        pyxel.image(1).load(51*2, 0, "assets/background/background/background2.png")
+        self.bg = [51*i for i in range(0, 3)]
+        pyxel.image(1).load(0, 51, "assets/background/room1.png")
+        self.rooms = self.makeRooms()
         pyxel.run(self.update, self.draw)
+
+    def makeRooms(self):
+        loc = [0, 400]
+        return [Rooms(loc[i], 102) for i in range(0, 2)]
 
     def drawBackGroung(self, row):
         diff_x = (self.pos.x-self.pos.screen_x) % 255
@@ -39,20 +43,39 @@ class App:
         if pyxel.btnp(pyxel.KEY_Q):
             pyxel.quit()
         self.pos.move()
+        '''
+        Find Collisions
+        '''
+        for box in self.pos.screen_x
 
     def draw(self):
         pyxel.cls(4)
-        for row in range(0, 3):
+        for row in range(0, 2):
             self.drawBackGroung(row)
+        self.drawRooms()
+
         if self.pos.x_vel*10 > 1:
-            pyxel.blt(self.pos.screen_x, self.pos.screen_y, *self.cowboy1_right, 7)
+            pyxel.blt(self.pos.x, self.pos.screen_y, *self.cowboy1_right, 7)
         elif self.pos.x_vel*10 < -1:
-            pyxel.blt(self.pos.screen_x, self.pos.screen_y, *self.cowboy1_left, 7)
+            pyxel.blt(self.pos.x, self.pos.screen_y, *self.cowboy1_left, 7)
         elif self.pos.y_vel*30 > -1:
-            pyxel.blt(self.pos.screen_x, self.pos.screen_y, *self.cowboy1_up, 7)
+            pyxel.blt(self.pos.x, self.pos.screen_y, *self.cowboy1_up, 7)
         else:
-            pyxel.blt(self.pos.screen_x, self.pos.screen_y, *self.cowboy1_standing, 7)
-        pyxel.rect(200, 0, 250, 150, 12)
+            pyxel.blt(self.pos.x, self.pos.screen_y, *self.cowboy1_standing, 7)
+
+        self.drawBullets()
+
+    def drawRooms(self):
+        diff_x = (self.pos.x-self.pos.screen_x)
+        diff_y = (self.pos.y-self.pos.screen_y)
+        left = (diff_x) % 51
+        for room in self.rooms:
+            if (self.pos.screen_x - 125 < room.x):
+                pyxel.blt(room.x+diff_x, room.y, 1, 0, 51, 51, 51, 7)
+            if (self.pos.screen_x + 125 > room.x):
+                pyxel.blt(room.x+diff_x, room.y, 1, 0, 51, 51, 51, 7)
+
+    def drawBullets(self):
         bullets = self.pos.getBullets()
         for bullet in bullets:
             pyxel.pix(bullet.x, bullet.y, 12)
