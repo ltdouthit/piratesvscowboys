@@ -1,6 +1,11 @@
 import pyxel
-from agent import Agent
+from Agent import Agent
 from objects import Crate
+
+from pirates_server.client import Client
+
+
+HOST = "piratesvscowboys.com"
 
 
 class App:
@@ -23,6 +28,8 @@ class App:
         pyxel.image(1).load(51*3, 0, "assets/background/ship_tiles/test_deck.png")
         self.bg = [51*i for i in range(0, 5)]
         pyxel.image(2).load(0, 0, "assets/background/ship_tiles/Crate0.png")
+        self.client = Client(HOST)
+        self.send_updates = []
         pyxel.run(self.update, self.draw)
 
     def drawBackGroung(self, row):
