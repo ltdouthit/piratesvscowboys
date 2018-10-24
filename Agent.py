@@ -8,9 +8,10 @@ AGENT_SPEED = 4
 
 class Agent:
 
-    def __init__(self):
-        self.x = 125
-        self.y = 50
+    def __init__(self, x, y, player_address):
+        self.x = x
+        self.y = y
+        self.player_address = player_address
         self.x_vel = 0
         self.y_vel = 0
         self.screen_x = 125
@@ -20,22 +21,41 @@ class Agent:
         self.health = 30  # 50 Max Health
         self.mesh = self.meshMaker(self.x, self.screen_y)
 
-    def move(self):
+    def get_move(self):
         if pyxel.btnp(pyxel.KEY_D):
-            #self.x = self.x + 1
-            self.facing = 0
-            self.x_vel += AGENT_SPEED
+            return {
+                "method": "player_moved",
+                "player_address": self.player_address,
+                "kwargs": {"facing": 0,
+                           "x_vel": AGENT_SPEED}
+            }
         elif pyxel.btnp(pyxel.KEY_A):
-            #self.x = self.x - 1
-            self.facing = 1
-            self.x_vel -= AGENT_SPEED
+            return {
+                "method": "player_moved",
+                "player_address": self.player_address,
+                "kwargs": {"facing": 1,
+                           "x_vel": -AGENT_SPEED}
+            }
         elif pyxel.btnp(pyxel.KEY_SPACE):
-            #self.y = self.y - 1
-            self.y_vel -= 10
+            return {
+                "method": "player_moved",
+                "player_address": self.player_address,
+                "kwargs": {"y_vel": -10}
+            }
         elif pyxel.btnp(pyxel.KEY_F):
             if len(self.bullets) < MAX_BULLETS:
-                self.bullets.append(Bullet(self.screen_x+16, self.screen_y+8, self.facing))
+                return {
+                    "method": "player_fired",
+                    "player_address": self.player_address,
+                }
 
+    def move(self, x_vel=None, y_vel=None, facing=None):
+        if x_vel is not None:
+            self.x_vel += x_vel
+        if y_vel is not None:
+            self.y_vel += y_vel
+        if facing is not None:
+            self.facing = facing
         if self.x < ARENA_SIZE[0]:
             self.x_vel += 10
         if self.x > ARENA_SIZE[1]:
@@ -50,6 +70,11 @@ class Agent:
         self.x_vel = self.x_vel*0.9
         self.y_vel = self.y_vel*0.9
         self.mesh = self.meshMaker(self.screen_x, self.screen_y)
+
+    def fire_bullet(self):
+        self.bullets.append(Bullet(self.screen_x+16, self.screen_y+8,
+                               self.facing))
+
 
     def getBullets(self):
         return self.bullets

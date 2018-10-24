@@ -43,21 +43,20 @@ class HandleTraffic:
 
     def send_update(self, socket, data):
         if not data:
-            data = [DO_NOTHING_STR]
-        for ins in data:
-            bytes_data = self.parse_dict_to_bytes(ins)
-            bytes_sent = 0
-            while bytes_sent < INSTRUCTION_LENGTH:
-                sent = socket.send(bytes_data[bytes_sent:])
-                if sent == 0:
-                    raise RuntimeError("Socket is broken on sending!")
-                bytes_sent += sent
+            data = DO_NOTHING_STR
+        bytes_data = self.parse_list_to_bytes(data)
+        bytes_sent = 0
+        while bytes_sent < INSTRUCTION_LENGTH:
+            sent = socket.send(bytes_data[bytes_sent:])
+            if sent == 0:
+                raise RuntimeError("Socket is broken on sending!")
+            bytes_sent += sent
         return []
 
-    def parse_dict_to_bytes(self, ins_dict):
-        if ins_dict == DO_NOTHING_STR:
+    def parse_list_to_bytes(self, ins_list):
+        if ins_list == DO_NOTHING_STR:
             return DO_NOTHING_INSTRUCTION
-        dict_data = json.dumps(ins_dict)
+        dict_data = json.dumps(ins_list)
         count = (INSTRUCTION_LENGTH - len(dict_data)) / 2
         if count.is_integer():
             extra = ""
@@ -67,3 +66,9 @@ class HandleTraffic:
         filler_bytes = FILLER * count
         bytes_data = (filler_bytes + dict_data + filler_bytes + extra).encode()
         return bytes_data
+
+    def execute(self, player_address, method, args=None, kwargs=None):
+        method = getattr(self, method)
+        args = args or []
+        kwargs = kwargs or {}
+        method(player_address, *args, **kwargs)

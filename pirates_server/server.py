@@ -1,6 +1,6 @@
 import socket
 
-from pirates_server import HandleTraffic
+from traffic import HandleTraffic
 
 
 HOST = ""
@@ -29,27 +29,33 @@ class PVCS(HandleTraffic):
             for player_address, player_socket in self._client_sockets.items():
                 print("GETTING UPDATE: {}".format(player_address))
                 instruction = self.get_update(player_socket)
-                if instruction:
-                    self.execute(player_address, **instruction)
+                self.add_instruction(instruction)
                 print("SENDING UPDATE: {}".format(player_address))
                 send_to = self._players[player_address]["send"]
                 self._players[player_address]["send"] = self.send_update(
                     player_socket, send_to)
 
+    def add_instruction(self, instruction):
+        for player_address in self._players:
+            self._players[player_address]["send"].append(instruction)
+
     def accept_players(self):
+        next_x, next_y = 0, 0
         while len(self._client_sockets) < 2:
             player_socket, player_address = self._socket_pool.accept()
+            player_address = player_address[0] + ":" + str(player_address[1])
             self._client_sockets[player_address] = player_socket
-            self._players[player_address] = {"send": []}
+            self._players[player_address] = {"send": [], "x": next_x,
+                                             "y": next_y}
+            self.send_update(player_socket, {"player_address": player_address})
+            next_x += 50
+        for player_address, player_socket in self._client_sockets.items():
+            self.send_update(
+                player_socket, {"game_started": True, "players": self._players}
+            )
 
     def check_to_start(self):
         self._started = True
-
-    def execute(self, player_address, method, args=None, kwargs=None):
-        method = getattr(self, method)
-        args = args or []
-        kwargs = kwargs or {}
-        method(player_address, *args, **kwargs)
 
     def quit(self, *args, **kwargs):
         self._started = False
