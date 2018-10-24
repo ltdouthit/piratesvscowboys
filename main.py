@@ -5,6 +5,7 @@ from objects import Crate
 from pirates_server.client import Client
 
 
+# HOST = "piratesvscowboys.com"
 HOST = "localhost"
 PORT = 5000
 
@@ -60,16 +61,21 @@ class App(Client):
                 pyxel.blt(col, 51*row, 1, self.bg[i % 2], 0, 51, 51, 7)
 
     def update(self):
-        if pyxel.btnp(pyxel.KEY_Q):
-            pyxel.quit()
-        move = self.pos.get_move()
-        self.send_update(self.socket, move)
         get_updates = self.get_update(self.socket) or []
         for instruction in get_updates:
             if not instruction:
                 continue
-            player_address = instruction.pop("player_address")
+            try:
+                player_address = instruction.pop("player_address")
+            except AttributeError:
+                breakpoint()
             self.execute(player_address, **instruction)
+        if pyxel.btnp(pyxel.KEY_Q):
+            pyxel.quit()
+        move = self.pos.get_move()
+        if move:
+            move = [move]
+        self.send_update(self.socket, move)
         for player in self.players.values():
             player.move()
         for testCrate in self.testCrates:
@@ -82,6 +88,9 @@ class App(Client):
     def player_fired(self, player_address, **kwargs):
         player = self.players[player_address]
         player.fire_bullet()
+
+    def do_nothing(self, *args, **kwargs):
+        pass
 
     def draw(self):
         pyxel.cls(1)

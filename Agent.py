@@ -23,26 +23,31 @@ class Agent:
 
     def get_move(self):
         if pyxel.btnp(pyxel.KEY_D):
+            kwargs = {"facing": 0, "x_vel": AGENT_SPEED}
+            self.move(**kwargs)
             return {
                 "method": "player_moved",
                 "player_address": self.player_address,
-                "kwargs": {"facing": 0,
-                           "x_vel": AGENT_SPEED}
+                "kwargs": kwargs,
             }
         elif pyxel.btnp(pyxel.KEY_A):
+            kwargs = {"facing": 1, "x_vel": -AGENT_SPEED}
+            self.move(**kwargs)
             return {
                 "method": "player_moved",
                 "player_address": self.player_address,
-                "kwargs": {"facing": 1,
-                           "x_vel": -AGENT_SPEED}
+                "kwargs": kwargs,
             }
         elif pyxel.btnp(pyxel.KEY_SPACE):
+            kwargs = {"y_vel": -10}
+            self.move(**kwargs)
             return {
                 "method": "player_moved",
                 "player_address": self.player_address,
-                "kwargs": {"y_vel": -10}
+                "kwargs": kwargs,
             }
         elif pyxel.btnp(pyxel.KEY_F):
+            self.fire_bullet()
             if len(self.bullets) < MAX_BULLETS:
                 return {
                     "method": "player_fired",
@@ -73,8 +78,7 @@ class Agent:
 
     def fire_bullet(self):
         self.bullets.append(Bullet(self.screen_x+16, self.screen_y+8,
-                               self.facing))
-
+                                   self.facing))
 
     def getBullets(self):
         return self.bullets

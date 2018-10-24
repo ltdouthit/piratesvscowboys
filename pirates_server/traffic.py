@@ -2,19 +2,6 @@ import json
 
 FILLER = "^"
 INSTRUCTION_LENGTH = 256
-DO_NOTHING_STR = "__DO_NOTHING__"
-DO_NOTHING_BYTES = DO_NOTHING_STR.encode()
-
-do_nothing_count = (INSTRUCTION_LENGTH - len(DO_NOTHING_STR)) / 2
-if do_nothing_count.is_integer():
-    do_nothing_extra = ""
-else:
-    do_nothing_extra = FILLER
-do_nothing_count = int(do_nothing_count)
-filler_bytes = FILLER * do_nothing_count
-DO_NOTHING_INSTRUCTION = (
-    filler_bytes + DO_NOTHING_STR + filler_bytes + do_nothing_extra
-).encode()
 
 
 class HandleTraffic:
@@ -32,19 +19,17 @@ class HandleTraffic:
             chunks.append(chunk)
             bytes_received = bytes_received + len(chunk)
         bytes_data = b"".join(chunks)
-        return self.parse_bytes_to_dict(bytes_data)
+        return self.parse_bytes_to_json(bytes_data)
 
-    def parse_bytes_to_dict(self, bytes_data):
-        if DO_NOTHING_BYTES in bytes_data:
-            return
+    def parse_bytes_to_json(self, bytes_data):
         bytes_data = bytes_data.decode().replace(FILLER, "")
         bytes_data = json.loads(bytes_data)
         return bytes_data
 
     def send_update(self, socket, data):
         if not data:
-            data = DO_NOTHING_STR
-        bytes_data = self.parse_list_to_bytes(data)
+            data = [{"method": "do_nothing", "player_address": None}]
+        bytes_data = self.parse_json_to_bytes(data)
         bytes_sent = 0
         while bytes_sent < INSTRUCTION_LENGTH:
             sent = socket.send(bytes_data[bytes_sent:])
@@ -53,18 +38,16 @@ class HandleTraffic:
             bytes_sent += sent
         return []
 
-    def parse_list_to_bytes(self, ins_list):
-        if ins_list == DO_NOTHING_STR:
-            return DO_NOTHING_INSTRUCTION
-        dict_data = json.dumps(ins_list)
-        count = (INSTRUCTION_LENGTH - len(dict_data)) / 2
+    def parse_json_to_bytes(self, json_data):
+        json_data = json.dumps(json_data)
+        count = (INSTRUCTION_LENGTH - len(json_data)) / 2
         if count.is_integer():
             extra = ""
         else:
             extra = FILLER
         count = int(count)
         filler_bytes = FILLER * count
-        bytes_data = (filler_bytes + dict_data + filler_bytes + extra).encode()
+        bytes_data = (filler_bytes + json_data + filler_bytes + extra).encode()
         return bytes_data
 
     def execute(self, player_address, method, args=None, kwargs=None):

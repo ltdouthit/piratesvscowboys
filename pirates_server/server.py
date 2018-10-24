@@ -27,17 +27,22 @@ class PVCS(HandleTraffic):
         while True:
             print("LOOP START")
             for player_address, player_socket in self._client_sockets.items():
-                print("GETTING UPDATE: {}".format(player_address))
-                instruction = self.get_update(player_socket)
-                self.add_instruction(instruction)
                 print("SENDING UPDATE: {}".format(player_address))
                 send_to = self._players[player_address]["send"]
                 self._players[player_address]["send"] = self.send_update(
                     player_socket, send_to)
+                print("GETTING UPDATE: {}".format(player_address))
+                instructions = self.get_update(player_socket)
+                self.add_instructions(instructions)
 
-    def add_instruction(self, instruction):
+    def add_instructions(self, instructions):
         for player_address in self._players:
-            self._players[player_address]["send"].append(instruction)
+            for ins in instructions:
+                try:
+                    if player_address != ins["player_address"]:
+                        self._players[player_address]["send"].append(ins)
+                except TypeError:
+                    breakpoint()
 
     def accept_players(self):
         next_x, next_y = 0, 0
