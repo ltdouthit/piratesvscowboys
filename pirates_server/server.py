@@ -33,6 +33,7 @@ class PVCS(HandleTraffic):
 
     def socket_loop(self, player_address, player_socket):
         while True:
+            print("SENDING UPDATE: {}".format(player_address))
             send_to = self._players[player_address]["send"]
             self._players[player_address]["send"] = self.send_update(
                 player_socket, send_to)

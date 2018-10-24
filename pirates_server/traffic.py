@@ -1,7 +1,7 @@
 import json
 
 FILLER = "^"
-INSTRUCTION_LENGTH = 256
+INSTRUCTION_LENGTH = 1024
 
 
 class HandleTraffic:
@@ -23,7 +23,10 @@ class HandleTraffic:
 
     def parse_bytes_to_json(self, bytes_data):
         bytes_data = bytes_data.decode().replace(FILLER, "")
-        bytes_data = json.loads(bytes_data)
+        try:
+            bytes_data = json.loads(bytes_data)
+        except:
+            breakpoint()
         return bytes_data
 
     def send_update(self, socket, data):

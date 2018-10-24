@@ -1,3 +1,5 @@
+import _thread
+
 import pyxel
 from Agent import Agent
 from objects import Crate
@@ -5,8 +7,8 @@ from objects import Crate
 from pirates_server.client import Client
 
 
-HOST = "localhost"
-# HOST = "piratesvscowboys.com"
+# HOST = "localhost"
+HOST = "piratesvscowboys.com"
 PORT = 5000
 
 
@@ -33,22 +35,32 @@ class App(Client):
             51*3, 0, "assets/background/ship_tiles/test_deck.png")
         self.bg = [51*i for i in range(0, 5)]
         pyxel.image(2).load(0, 0, "assets/background/ship_tiles/Crate0.png")
-        self.socket = self.get_socket(HOST, PORT)
-        self.player_address = self.get_update(self.socket)["player_address"]
-        self.players = self.wait_for_game()
+        socket = self.get_socket(HOST, PORT)
+        self.player_address = self.get_update(socket)["player_address"]
+        self.players = self.wait_for_game(socket)
         self.pos = self.players[self.player_address]
-        pyxel.run(self.update, self.draw)
+        self.get_from = []
+        self.send_to = []
+        _thread.start_new_thread(self.socket_loop, (socket,))
+        pyxel.run_with_profiler(self.update, self.draw)
 
-    def wait_for_game(self):
+    def wait_for_game(self, socket):
         update = {"game_started": False}
         while not update["game_started"]:
-            update = self.get_update(self.socket)
+            update = self.get_update(socket)
         player_agents = {}
         for player_address, player_data in update["players"].items():
             player_agents[player_address] = Agent(player_data["x"],
                                                   player_data["y"],
                                                   player_address)
         return player_agents
+
+    def socket_loop(self, socket):
+        while True:
+            print(len(self.get_from), len(self.send_to))
+            self.get_from.extend(self.get_update(socket))
+            self.send_update(socket, self.send_to)
+            self.send_to = []
 
     def drawBackGroung(self, row):
         diff_x = (self.pos.x-self.pos.screen_x) % 255
@@ -61,21 +73,19 @@ class App(Client):
                 pyxel.blt(col, 51*row, 1, self.bg[i % 2], 0, 51, 51, 7)
 
     def update(self):
-        get_updates = self.get_update(self.socket) or []
-        for instruction in get_updates:
+        for instruction in self.get_from:
             if not instruction:
                 continue
             try:
-                player_address = instruction.pop("player_address")
-            except AttributeError:
+                player_address = instruction.pop("player_address", None)
+            except KeyError:
                 breakpoint()
             self.execute(player_address, **instruction)
+            self.get_from = []
         if pyxel.btnp(pyxel.KEY_Q):
             pyxel.quit()
         move = self.pos.get_move()
-        if move:
-            move = [move]
-        self.send_update(self.socket, move)
+        self.send_to.append(move)
         for player in self.players.values():
             player.move()
         for testCrate in self.testCrates:
