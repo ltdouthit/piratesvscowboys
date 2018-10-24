@@ -1,4 +1,5 @@
 import socket
+import _thread
 
 from traffic import HandleTraffic
 
@@ -24,25 +25,20 @@ class PVCS(HandleTraffic):
 
     def run(self):
         self.accept_players()
+        for player_address, player_socket in self._client_sockets.items():
+            _thread.start_new_thread(self.socket_loop,
+                                     (player_address, player_socket))
         while True:
-            print("LOOP START")
-            for player_address, player_socket in self._client_sockets.items():
-                print("SENDING UPDATE: {}".format(player_address))
-                send_to = self._players[player_address]["send"]
-                self._players[player_address]["send"] = self.send_update(
-                    player_socket, send_to)
-                print("GETTING UPDATE: {}".format(player_address))
-                instructions = self.get_update(player_socket)
-                self.add_instructions(instructions)
+            pass  # keep it running, threads handle everything
 
-    def add_instructions(self, instructions):
-        for player_address in self._players:
-            for ins in instructions:
-                try:
-                    if player_address != ins["player_address"]:
-                        self._players[player_address]["send"].append(ins)
-                except TypeError:
-                    breakpoint()
+    def socket_loop(self, player_address, player_socket):
+        while True:
+            send_to = self._players[player_address]["send"]
+            self._players[player_address]["send"] = self.send_update(
+                player_socket, send_to)
+            print("GETTING UPDATE: {}".format(player_address))
+            instructions = self.get_update(player_socket)
+            self.add_instructions(instructions)
 
     def accept_players(self):
         next_x, next_y = 0, 0
@@ -58,6 +54,15 @@ class PVCS(HandleTraffic):
             self.send_update(
                 player_socket, {"game_started": True, "players": self._players}
             )
+
+    def add_instructions(self, instructions):
+        for player_address in self._players:
+            for ins in instructions:
+                try:
+                    if player_address != ins["player_address"]:
+                        self._players[player_address]["send"].append(ins)
+                except TypeError:
+                    breakpoint()
 
     def check_to_start(self):
         self._started = True

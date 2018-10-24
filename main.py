@@ -5,8 +5,8 @@ from objects import Crate
 from pirates_server.client import Client
 
 
-# HOST = "piratesvscowboys.com"
 HOST = "localhost"
+# HOST = "piratesvscowboys.com"
 PORT = 5000
 
 
