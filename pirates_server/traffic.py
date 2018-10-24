@@ -23,10 +23,7 @@ class HandleTraffic:
 
     def parse_bytes_to_json(self, bytes_data):
         bytes_data = bytes_data.decode().replace(FILLER, "")
-        try:
-            bytes_data = json.loads(bytes_data)
-        except:
-            breakpoint()
+        bytes_data = json.loads(bytes_data)
         return bytes_data
 
     def send_update(self, socket, data):

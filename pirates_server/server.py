@@ -59,11 +59,9 @@ class PVCS(HandleTraffic):
     def add_instructions(self, instructions):
         for player_address in self._players:
             for ins in instructions:
-                try:
-                    if player_address != ins["player_address"]:
-                        self._players[player_address]["send"].append(ins)
-                except TypeError:
-                    breakpoint()
+                if ins is None:
+                    ins = {"method_name": "do_nothing", "player_address": None}
+                self._players[player_address]["send"].append(ins)
 
     def check_to_start(self):
         self._started = True
