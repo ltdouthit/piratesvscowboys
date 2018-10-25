@@ -22,37 +22,29 @@ class Agent:
         self.mesh = self.meshMaker(self.x, self.screen_y)
 
     def get_move(self):
+        method = "do_nothing"
+        kwargs = {}
         if pyxel.btnp(pyxel.KEY_D):
+            method = "player_moved"
             kwargs = {"facing": 0, "x_vel": AGENT_SPEED}
-            self.move(**kwargs)
-            return {
-                "method": "player_moved",
-                "player_address": self.player_address,
-                "kwargs": kwargs,
-            }
-        elif pyxel.btnp(pyxel.KEY_A):
+        if pyxel.btnp(pyxel.KEY_A):
+            method = "player_moved"
             kwargs = {"facing": 1, "x_vel": -AGENT_SPEED}
-            self.move(**kwargs)
-            return {
-                "method": "player_moved",
-                "player_address": self.player_address,
-                "kwargs": kwargs,
-            }
-        elif pyxel.btnp(pyxel.KEY_SPACE):
+        if pyxel.btnp(pyxel.KEY_SPACE):
+            method = "player_moved"
             kwargs = {"y_vel": -10}
-            self.move(**kwargs)
-            return {
-                "method": "player_moved",
-                "player_address": self.player_address,
-                "kwargs": kwargs,
-            }
-        elif pyxel.btnp(pyxel.KEY_F):
+        if pyxel.btnp(pyxel.KEY_Q):
+            method = "player_quit"
+        self.move(**kwargs)
+        if pyxel.btnp(pyxel.KEY_F):
             self.fire_bullet()
             if len(self.bullets) < MAX_BULLETS:
-                return {
-                    "method": "player_fired",
-                    "player_address": self.player_address,
-                }
+                method = "player_fired"
+        return {
+            "method": method,
+            "player_address": self.player_address,
+            "kwargs": kwargs
+        }
 
     def move(self, x_vel=None, y_vel=None, facing=None):
         if x_vel is not None:

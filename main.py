@@ -1,15 +1,30 @@
-import _thread
+import threading
 
 import pyxel
+import queue
 from Agent import Agent
 from objects import Crate
 
 from pirates_server.client import Client
 
 
-# HOST = "localhost"
-HOST = "piratesvscowboys.com"
+HOST = "localhost"
+# HOST = "piratesvscowboys.com"
 PORT = 5000
+
+
+class SocketThread(Client, threading.Thread):
+
+    def __init__(self, socket):
+        super().__init__()
+        self.socket = socket
+        self.get_from = queue.Queue()
+        self.send_to = queue.Queue()
+
+    def run(self):
+        while True:
+            self.get_from.put(self.get_update(self.socket))
+            self.send_update(self.socket, self.send_to.get())
 
 
 class App(Client):
@@ -39,9 +54,8 @@ class App(Client):
         self.player_address = self.get_update(socket)["player_address"]
         self.players = self.wait_for_game(socket)
         self.pos = self.players[self.player_address]
-        self.get_from = []
-        self.send_to = []
-        _thread.start_new_thread(self.socket_loop, (socket,))
+        self.socket_thread = SocketThread(socket)
+        self.socket_thread.start()
         pyxel.run_with_profiler(self.update, self.draw)
 
     def wait_for_game(self, socket):
@@ -55,13 +69,6 @@ class App(Client):
                                                   player_address)
         return player_agents
 
-    def socket_loop(self, socket):
-        while True:
-            print(len(self.get_from), len(self.send_to))
-            self.get_from.extend(self.get_update(socket))
-            self.send_update(socket, self.send_to)
-            self.send_to = []
-
     def drawBackGroung(self, row):
         diff_x = (self.pos.x-self.pos.screen_x) % 255
         left = (diff_x) % 51
@@ -73,20 +80,23 @@ class App(Client):
                 pyxel.blt(col, 51*row, 1, self.bg[i % 2], 0, 51, 51, 7)
 
     def update(self):
-        for instruction in self.get_from:
-            if not instruction:
-                continue
+        queue_empty = False
+        while not queue_empty:
             try:
-                player_address = instruction.pop("player_address", None)
-            except KeyError:
-                breakpoint()
-            self.execute(player_address, **instruction)
-            self.get_from = []
-        if pyxel.btnp(pyxel.KEY_Q):
-            pyxel.quit()
+                instruction_set = self.socket_thread.get_from.get(block=False)
+                if not isinstance(instruction_set, list):
+                    instruction_set = [instruction_set]
+                for instruction in instruction_set:
+                    player_address = instruction.pop("player_address")
+                    self.execute(player_address, **instruction)
+            except queue.Empty:
+                queue_empty = True
         move = self.pos.get_move()
-        self.send_to.append(move)
+        self.socket_thread.send_to.put(move)
+        self.check_quit(move)
         for player in self.players.values():
+            if player.player_address == self.player_address:
+                continue
             player.move()
         for testCrate in self.testCrates:
             self.collistion(testCrate, self.pos)
@@ -98,6 +108,14 @@ class App(Client):
     def player_fired(self, player_address, **kwargs):
         player = self.players[player_address]
         player.fire_bullet()
+
+    def check_quit(self, move):
+        if move["method"] == "player_quit":
+            self.player_quit()
+
+    def player_quit(self, *args, **kwargs):
+        self.socket_thread.join()
+        pyxel.quit()
 
     def do_nothing(self, *args, **kwargs):
         pass
