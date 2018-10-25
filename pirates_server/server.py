@@ -15,25 +15,17 @@ class ClientSocketThread(HandleTraffic, threading.Thread):
         super().__init__()
         self.socket = socket
         self.send_to = queue.Queue()
-        self.updates = queue.Queue()
+        self.get_from = queue.Queue()
 
     def run(self):
         while True:
-            queue_empty = False
-            send = []
-            while not queue_empty:
-                try:
-                    send.append(self.send_to.get(block=False))
-                except queue.Empty:
-                    queue_empty = True
+            try:
+                send = self.send_to.get(block=False)
+            except queue.Empty:
+                send = None
             self.send_update(self.socket, send)
-            player_updates = self.get_update(self.socket)
-            self.updates.put(player_updates)
-            print("{}: ({}/{})".format(
-                self.socket,
-                self.send_to.qsize(),
-                self.updates.qsize())
-            )
+            updates = self.get_update(self.socket)
+            self.get_from.put(updates)
 
 
 class PVCS(HandleTraffic):
@@ -52,17 +44,16 @@ class PVCS(HandleTraffic):
     def run(self):
         self.accept_players()
         while True:
-            for player_address, player in self.players.items():
+            for player in self.players.values():
                 queue_empty = False
-                updates = []
                 while not queue_empty:
                     try:
-                        update = player["thread"].updates.get(block=False)
-                        updates.append(update)
+                        update = player["thread"].get_from.get(block=False)
+                        for other in self.players.values():
+                            if other != player:
+                                other["thread"].send_to.put(update)
                     except queue.Empty:
                         queue_empty = True
-                for update in updates:
-                    self.add_update(update, player_address)
 
     def accept_players(self):
         next_x, next_y = 0, 0
@@ -84,11 +75,3 @@ class PVCS(HandleTraffic):
             self.send_update(socket,
                              {"game_started": True, "players": player_json})
             player["thread"].start()
-
-    def add_update(self, update, update_player_address):
-        if update is None:
-            update = {"method": "do_nothing",
-                      "player_address": update_player_address}
-        for player_address, player in self.players.items():
-            if player_address != update_player_address:
-                player["thread"].send_to.put(update)

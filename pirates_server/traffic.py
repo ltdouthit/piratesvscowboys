@@ -28,7 +28,7 @@ class HandleTraffic:
 
     def send_update(self, socket, data):
         if not data:
-            data = [{"method": "do_nothing", "player_address": None}]
+            data = {"method": "do_nothing", "player_address": None}
         bytes_data = self.parse_json_to_bytes(data)
         bytes_sent = 0
         while bytes_sent < INSTRUCTION_LENGTH:

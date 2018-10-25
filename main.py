@@ -23,8 +23,10 @@ class SocketThread(Client, threading.Thread):
 
     def run(self):
         while True:
-            self.get_from.put(self.get_update(self.socket))
-            self.send_update(self.socket, self.send_to.get())
+            updates = self.get_update(self.socket)
+            self.get_from.put(updates)
+            send = self.send_to.get()
+            self.send_update(self.socket, send)
 
 
 class App(Client):
@@ -83,12 +85,9 @@ class App(Client):
         queue_empty = False
         while not queue_empty:
             try:
-                instruction_set = self.socket_thread.get_from.get(block=False)
-                if not isinstance(instruction_set, list):
-                    instruction_set = [instruction_set]
-                for instruction in instruction_set:
-                    player_address = instruction.pop("player_address")
-                    self.execute(player_address, **instruction)
+                instruction = self.socket_thread.get_from.get(block=False)
+                player_address = instruction.pop("player_address")
+                self.execute(player_address, **instruction)
             except queue.Empty:
                 queue_empty = True
         move = self.pos.get_move()
