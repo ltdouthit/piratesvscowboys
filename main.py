@@ -1,11 +1,8 @@
-import threading
-
 import pyxel
-import queue
 from Agent import Agent
 from objects import Crate
 
-from pirates_server.client import Client
+from pirates_server.traffic import HandleTraffic, GetFromThread, SendToThread
 
 
 HOST = "localhost"
@@ -13,23 +10,7 @@ HOST = "localhost"
 PORT = 5000
 
 
-class SocketThread(Client, threading.Thread):
-
-    def __init__(self, socket):
-        super().__init__()
-        self.socket = socket
-        self.get_from = queue.Queue()
-        self.send_to = queue.Queue()
-
-    def run(self):
-        while True:
-            updates = self.get_update(self.socket)
-            self.get_from.put(updates)
-            send = self.send_to.get()
-            self.send_update(self.socket, send)
-
-
-class App(Client):
+class App(HandleTraffic):
     testCrates = [Crate(250 + 75, 125), Crate(300 + 75, 125)]
 
     def __init__(self):
@@ -56,8 +37,10 @@ class App(Client):
         self.player_address = self.get_update(socket)["player_address"]
         self.players = self.wait_for_game(socket)
         self.pos = self.players[self.player_address]
-        self.socket_thread = SocketThread(socket)
-        self.socket_thread.start()
+        self.get_from = GetFromThread(socket)
+        self.send_to = SendToThread(socket)
+        self.get_from.start()
+        self.send_to.start()
         pyxel.run_with_profiler(self.update, self.draw)
 
     def wait_for_game(self, socket):
@@ -82,16 +65,11 @@ class App(Client):
                 pyxel.blt(col, 51*row, 1, self.bg[i % 2], 0, 51, 51, 7)
 
     def update(self):
-        queue_empty = False
-        while not queue_empty:
-            try:
-                instruction = self.socket_thread.get_from.get(block=False)
-                player_address = instruction.pop("player_address")
-                self.execute(player_address, **instruction)
-            except queue.Empty:
-                queue_empty = True
+        for instruction in self.get_from:
+            player_address = instruction.pop("player_address")
+            self.execute(player_address, **instruction)
         move = self.pos.get_move()
-        self.socket_thread.send_to.put(move)
+        self.send_to.put(move)
         self.check_quit(move)
         for player in self.players.values():
             if player.player_address == self.player_address:
@@ -113,7 +91,8 @@ class App(Client):
             self.player_quit()
 
     def player_quit(self, *args, **kwargs):
-        self.socket_thread.join()
+        self.get_from.stop()
+        self.send_to.stop()
         pyxel.quit()
 
     def do_nothing(self, *args, **kwargs):
