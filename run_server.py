@@ -1,6 +1,6 @@
 from sys import argv
 
-from server import MatchMaker, HOST, PORT
+from pirates_server.server import MatchMaker, HOST, PORT
 
 
 if __name__ == "__main__":

@@ -3,15 +3,16 @@ import pyxel
 from Agent import Agent
 from objects import Crate
 
-from pirates_server.traffic import HandleTraffic, GetFromThread, SendToThread
+from pirates_server.client import Client
+from pirates_server.socket_threads import GetFromThread, SendToThread
 
 
-HOST = "localhost" #"piratesvscowboys.com"
+HOST = "localhost"
 # HOST = "piratesvscowboys.com"
 PORT = 5000
 
 
-class App(HandleTraffic):
+class App(Client):
     testCrates = [Crate(250 + 75, 125), Crate(300 + 75, 125)]
 
     def __init__(self):
@@ -35,7 +36,6 @@ class App(HandleTraffic):
         self.bg = [51*i for i in range(0, 5)]
         pyxel.image(2).load(0, 0, "assets/background/ship_tiles/Crate0.png")
         game_server_port = self.get_game_server_port()
-        print(game_server_port)
         socket = self.get_socket(HOST, game_server_port)
         self.player_address = self.get_update(socket)["player_address"]
         self.players = self.wait_for_game(socket)
@@ -53,14 +53,13 @@ class App(HandleTraffic):
         return port
 
     def wait_for_game(self, socket):
-        update = {"game_started": False}
-        while not update["game_started"]:
-            update = self.get_update(socket)
+        get_update = {"game_started": False}
+        while not get_update["game_started"]:
+            get_update = self.get_update(socket)
         player_agents = {}
-        for player_address, player_data in update["players"].items():
-            player_agents[player_address] = Agent(player_data["x"],
-                                                  player_data["y"],
-                                                  player_address)
+        for player_address, player_data in get_update["players"].items():
+            player_agents[player_address] = Agent(player_address,
+                                                  **player_data)
         return player_agents
 
     def drawBackGroung(self, row):
@@ -76,19 +75,16 @@ class App(HandleTraffic):
     def update(self):
         for instruction in self.get_from:
             player_address = instruction.pop("player_address")
-            self.execute(player_address, **instruction)
+            self.execute_remote_instruction(player_address, **instruction)
         for player in self.players.values():
-            if player.player_address == self.player_address:
+            if player is self.pos:
                 continue
-            if not player.had_movment:
+            elif not player.has_moved:
                 player.move()
-
+            player.has_moved = False
         move = self.pos.get_move()
         self.send_to.put(move)
         self.check_quit(move)
-        for player in self.players.values():
-            player.has_moved = False
-            player.move()
         for testCrate in self.testCrates:
             self.collistion(testCrate, self.pos)
 
@@ -99,6 +95,11 @@ class App(HandleTraffic):
     def player_fired(self, player_address, **kwargs):
         player = self.players[player_address]
         player.fire_bullet()
+
+    def player_won(self, player_address, **kwargs):
+        winning_player = self.players[player_address]
+        winning_team = winning_player.team
+        print("{} won!".format(winning_team))
 
     def check_quit(self, move):
         if move["method"] == "player_quit":
@@ -118,11 +119,10 @@ class App(HandleTraffic):
             self.drawBackGroung(row)
         for player in self.players.values():
             if player is self.pos:
-                #self.draw_player(self.player)
+                # self.draw_player(self.player)
                 pass
             else:
                 self.draw_player(player)
-                pass
         self.drawHealth()
         self.drawShipAssets()
         self.drawShip(2)
@@ -134,7 +134,7 @@ class App(HandleTraffic):
 
     def draw_player(self, player):
         print("on screen S:{0} A:{1}".format(player.x, self.pos.x))
-        if player.x < self.pos.x - 200 and  player.x < self.pos.x + 200:
+        if player.x < self.pos.x - 200 and player.x < self.pos.x + 200:
             diff = player.x - self.pos.x
             if player.x_vel*10 > 1:
                 pyxel.blt(self.pos.screen_x + diff, player.screen_y,

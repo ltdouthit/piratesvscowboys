@@ -1,17 +1,21 @@
 import threading
 import socket
 
-from traffic import HandleTraffic, GetFromThread, SendToThread
+from .traffic import SendTraffic
+from .socket_threads import GetFromThread, SendToThread
 
 
 HOST = ""
 PORT = 5000
 
 
-class Server(HandleTraffic):
+class Server(SendTraffic):
 
     def __init__(self, host=HOST, port=PORT, listen=5):
         self.socket_pool = self.get_socket_pool(host, port, listen)
+        self.host = host or "localhost"
+        self.port = port
+        self.listen = listen
         self.running = True
 
     def get_socket_pool(self, host, port, listen):
@@ -20,6 +24,11 @@ class Server(HandleTraffic):
         socket_pool.bind((host, port))
         socket_pool.listen(listen)
         return socket_pool
+
+    def __repr__(self):
+        print("{}({}, port={}, listen={})".format(
+            self.__class__.__name__, self.host, self.port, self.listen)
+        )
 
 
 class MatchMaker(Server):
@@ -45,39 +54,27 @@ class MatchMaker(Server):
                 self.game_threads[self.port] = game_thread
             self.send_update(player_socket, {"port": self.port})
             player_socket.close()
-            for thread in self.game_threads.values():
-                if not thread.running:
-                    thread.join()
 
 
 class GameThread(threading.Thread):
 
     def __init__(self, port):
         super().__init__()
-        self.game = PVCS(HOST, port)
+        self.game = Game(HOST, port)
         self.running = True
 
     def run(self):
         self.game.run()
         while self.game.running:
             pass
+        self.stop()
+
+    def stop(self):
         self.running = False
+        self.join()
 
 
-class CleanupThread(threading.Thread):
-
-    def __init__(self, game_threads):
-        super().__init__()
-        self.game_threads = game_threads
-
-    def run(self):
-        for thread in self.game_threads.values():
-            if not thread.running:
-                thread.join()
-                del thread
-
-
-class PVCS(Server):
+class Game(Server):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -99,19 +96,23 @@ class PVCS(Server):
                     other["send_to"].put(update)
 
     def accept_players(self):
-        next_x, next_y = 0, 0
+        next_x, next_y, next_team = 0, 0, 0
         while len(self.players) < 2:
             player_socket, player_address = self.socket_pool.accept()
             player_address = player_address[0] + ":" + str(player_address[1])
+            if not next_team % 2:
+                team = "cowboys"
+            else:
+                team = "pirates"
             self.players[player_address] = {
                 "get_from": GetFromThread(player_socket),
                 "send_to": SendToThread(player_socket),
-                "x": next_x,
-                "y": next_y
+                "json_data": {"x": next_x, "y": next_y, "team": team}
             }
             self.send_update(player_socket, {"player_address": player_address})
             next_x += 50
-        player_json = {player_address: {"x": player["x"], "y": player["y"]}
+            next_team += 1
+        player_json = {player_address: player["json_data"]
                        for player_address, player in self.players.items()}
         for player in self.players.values():
             player["send_to"].send_update(

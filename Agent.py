@@ -8,9 +8,10 @@ AGENT_SPEED = 4
 
 class Agent:
 
-    def __init__(self, x, y, player_address):
+    def __init__(self, player_address, x=None, y=None, team=None):
         self.x = x
         self.y = y
+        self.team = team
         self.player_address = player_address
         self.x_vel = 0
         self.y_vel = 0
@@ -20,8 +21,7 @@ class Agent:
         self.bullets = []
         self.health = 30  # 50 Max Health
         self.mesh = self.meshMaker(self.x, self.screen_y)
-        self.had_movment = False;
-
+        self.has_moved = False
 
     def get_move(self):
         method = "do_nothing"
@@ -48,9 +48,8 @@ class Agent:
             "kwargs": kwargs
         }
 
-
     def move(self, x_vel=None, y_vel=None, facing=None):
-        self.had_movment = True
+        self.has_moved = True
         if x_vel is not None:
             self.x_vel += x_vel
         if y_vel is not None:
@@ -68,7 +67,7 @@ class Agent:
             self.y_vel = 0
         self.x += self.x_vel
         self.screen_y += self.y_vel + 3
-        self.x_vel = 0#self.x_vel*0.9
+        self.x_vel = 0  # self.x_vel*0.9
         self.y_vel = self.y_vel*0.9
         self.mesh = self.meshMaker(self.screen_x, self.screen_y)
 
