@@ -5,7 +5,7 @@ from objects import Crate
 from pirates_server.traffic import HandleTraffic, GetFromThread, SendToThread
 
 
-HOST = "localhost"
+HOST = "localhost" #"piratesvscowboys.com"
 # HOST = "piratesvscowboys.com"
 PORT = 5000
 
@@ -68,13 +68,18 @@ class App(HandleTraffic):
         for instruction in self.get_from:
             player_address = instruction.pop("player_address")
             self.execute(player_address, **instruction)
+        for player in self.players.values():
+            if player.player_address == self.player_address:
+                continue
+            if not player.had_movment:
+                player.move()
+
         move = self.pos.get_move()
         self.send_to.put(move)
         self.check_quit(move)
         for player in self.players.values():
-            if player.player_address == self.player_address:
-                continue
-            player.move()
+            player.has_moved = False
+
         for testCrate in self.testCrates:
             self.collistion(testCrate, self.pos)
 
@@ -103,7 +108,12 @@ class App(HandleTraffic):
         for row in range(0, 2):
             self.drawBackGroung(row)
         for player in self.players.values():
-            self.draw_player(player)
+            if player is self.pos:
+                #self.draw_player(self.player)
+                pass
+            else:
+                self.draw_player(player)
+                pass
         self.drawHealth()
         self.drawShipAssets()
         self.drawShip(2)
@@ -114,18 +124,21 @@ class App(HandleTraffic):
                         testCrate.mesh[0][1], testCrate.mesh[1][1], 14)
 
     def draw_player(self, player):
-        if player.x_vel*10 > 1:
-            pyxel.blt(player.screen_x, player.screen_y,
-                      *self.cowboy1_right, 7)
-        elif player.x_vel*10 < -1:
-            pyxel.blt(player.screen_x, player.screen_y,
-                      *self.cowboy1_left, 7)
-        elif player.y_vel*30 > -1:
-            pyxel.blt(player.screen_x, player.screen_y,
-                      *self.cowboy1_up, 7)
-        else:
-            pyxel.blt(player.screen_x, player.screen_y,
-                      *self.cowboy1_standing, 7)
+        print("on screen S:{0} A:{1}".format(player.x, self.pos.x))
+        if player.x < self.pos.x - 200 and  player.x < self.pos.x + 200:
+            diff = player.x - self.pos.x
+            if player.x_vel*10 > 1:
+                pyxel.blt(self.pos.screen_x + diff, player.screen_y,
+                          *self.cowboy1_right, 7)
+            elif player.x_vel*10 < -1:
+                pyxel.blt(self.pos.screen_x + diff, player.screen_y,
+                          *self.cowboy1_left, 7)
+            elif player.y_vel*30 > -1:
+                pyxel.blt(self.pos.x + diff, player.screen_y,
+                          *self.cowboy1_up, 7)
+            else:
+                pyxel.blt(self.pos.x + diff, player.screen_y,
+                          *self.cowboy1_standing, 7)
         bullets = player.getBullets()
         for bullet in bullets:
             pyxel.circ(bullet.inital_x+bullet.x, bullet.inital_y, 1, 0)

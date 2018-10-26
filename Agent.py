@@ -20,6 +20,8 @@ class Agent:
         self.bullets = []
         self.health = 30  # 50 Max Health
         self.mesh = self.meshMaker(self.x, self.screen_y)
+        self.had_movment = False;
+
 
     def get_move(self):
         method = "do_nothing"
@@ -46,7 +48,9 @@ class Agent:
             "kwargs": kwargs
         }
 
+
     def move(self, x_vel=None, y_vel=None, facing=None):
+        self.had_movment = True
         if x_vel is not None:
             self.x_vel += x_vel
         if y_vel is not None:
@@ -54,17 +58,17 @@ class Agent:
         if facing is not None:
             self.facing = facing
         if self.x < ARENA_SIZE[0]:
-            self.x_vel += 10
+            self.x_vel += AGENT_SPEED
         if self.x > ARENA_SIZE[1]:
-            self.x_vel -= 10
-        self.x += self.x_vel
+            self.x_vel -= AGENT_SPEED
         if self.screen_y > 120:
             self.y_vel += -1
         if self.screen_y < -10:
-            self.screen_y = -0
+            self.screen_y = 0
             self.y_vel = 0
+        self.x += self.x_vel
         self.screen_y += self.y_vel + 3
-        self.x_vel = self.x_vel*0.9
+        self.x_vel = 0#self.x_vel*0.9
         self.y_vel = self.y_vel*0.9
         self.mesh = self.meshMaker(self.screen_x, self.screen_y)
 
@@ -81,13 +85,13 @@ class Agent:
     def collistionAdj(self, dir):
         # 1=Up, 2=Down, 3=Left, 4=Right
         if dir == 2:
-            self.y_vel -= 4
+            self.y_vel -= AGENT_SPEED
             self.x_vel = self.x_vel*0.05
         elif dir == 3:
-            self.x_vel += 3
+            self.x_vel += AGENT_SPEED
             self.y_vel = 0
         elif dir == 4:
-            self.x_vel -= 3
+            self.x_vel -= AGENT_SPEED
             self.y_vel = 0
 
 
