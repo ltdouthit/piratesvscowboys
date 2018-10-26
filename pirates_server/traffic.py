@@ -11,6 +11,13 @@ THREAD_DELAY = 0.001
 
 class HandleTraffic:
 
+    def get_socket_pool(self, host, port):
+        socket_pool = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        socket_pool.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        socket_pool.bind((host, port))
+        socket_pool.listen(5)
+        return socket_pool
+
     def get_socket(self, host, port):
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client_socket.connect((host, port))

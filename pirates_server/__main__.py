@@ -1,6 +1,6 @@
 from sys import argv
 
-from server import PVCS, HOST, PORT
+from server import MatchMaker, HOST, PORT
 
 
 if __name__ == "__main__":
@@ -13,6 +13,5 @@ if __name__ == "__main__":
         host = int(argv[2])
     except IndexError:
         host = HOST
-    server = PVCS(host, port)
-    print("pvcs server started on {}:{}.\n".format(host or "localhost", port))
+    server = MatchMaker(host, port, listen=10)
     server.run()
