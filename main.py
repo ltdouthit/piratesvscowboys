@@ -1,4 +1,5 @@
 import pyxel
+
 from Agent import Agent
 from objects import Crate
 
@@ -33,7 +34,9 @@ class App(HandleTraffic):
             51*3, 0, "assets/background/ship_tiles/test_deck.png")
         self.bg = [51*i for i in range(0, 5)]
         pyxel.image(2).load(0, 0, "assets/background/ship_tiles/Crate0.png")
-        socket = self.get_socket(HOST, PORT)
+        game_server_port = self.get_game_server_port()
+        print(game_server_port)
+        socket = self.get_socket(HOST, game_server_port)
         self.player_address = self.get_update(socket)["player_address"]
         self.players = self.wait_for_game(socket)
         self.pos = self.players[self.player_address]
@@ -42,6 +45,12 @@ class App(HandleTraffic):
         self.get_from.start()
         self.send_to.start()
         pyxel.run_with_profiler(self.update, self.draw)
+
+    def get_game_server_port(self):
+        assign_socket = self.get_socket(HOST, PORT)
+        port = self.get_update(assign_socket)["port"]
+        assign_socket.close()
+        return port
 
     def wait_for_game(self, socket):
         update = {"game_started": False}
@@ -79,7 +88,7 @@ class App(HandleTraffic):
         self.check_quit(move)
         for player in self.players.values():
             player.has_moved = False
-
+            player.move()
         for testCrate in self.testCrates:
             self.collistion(testCrate, self.pos)
 
