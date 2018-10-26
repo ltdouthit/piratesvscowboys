@@ -45,6 +45,9 @@ class MatchMaker(Server):
                 self.game_threads[self.port] = game_thread
             self.send_update(player_socket, {"port": self.port})
             player_socket.close()
+            for thread in self.game_threads.values():
+                if not thread.running:
+                    thread.join()
 
 
 class GameThread(threading.Thread):
@@ -52,11 +55,26 @@ class GameThread(threading.Thread):
     def __init__(self, port):
         super().__init__()
         self.game = PVCS(HOST, port)
+        self.running = True
 
     def run(self):
         self.game.run()
         while self.game.running:
             pass
+        self.running = False
+
+
+class CleanupThread(threading.Thread):
+
+    def __init__(self, game_threads):
+        super().__init__()
+        self.game_threads = game_threads
+
+    def run(self):
+        for thread in self.game_threads.values():
+            if not thread.running:
+                thread.join()
+                del thread
 
 
 class PVCS(Server):
@@ -73,6 +91,8 @@ class PVCS(Server):
                 update = player["get_from"].get()
                 if not update:
                     continue
+                elif update["method"] == "player_quit":
+                    self.running = False
                 for other in self.players.values():
                     if player == other:
                         continue
