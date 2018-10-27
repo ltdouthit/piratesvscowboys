@@ -1,5 +1,7 @@
 import pyxel
 
+from items import Treasure
+
 MAX_BULLETS = 3
 BULLET_SPEED = 2
 ARENA_SIZE = [0, 1000]
@@ -21,8 +23,10 @@ class Agent:
         self.facing = 0
         self.bullets = []
         self.health = 30  # 50 Max Health
+        self.picked_up = []
         # self.mesh = self.meshMaker(self.x, self.screen_y)
         self.has_moved = False
+        self.won = False
 
     def get_move(self):
         method = "do_nothing"
@@ -68,6 +72,9 @@ class Agent:
             self.y_vel = 0
         self.x += self.x_vel
         self.y += self.y_vel + 3
+        for item in self.picked_up:
+            item.x = self.x - 5
+            item.y = self.y
         # self.screen_y += self.y_vel + 3
         self.x_vel = self.x_vel * 0.9
         self.y_vel = self.y_vel * 0.9
@@ -77,27 +84,14 @@ class Agent:
         if len(self.bullets) < MAX_BULLETS:
             self.bullets.append(Bullet(self.x + 16, self.y + 8, self.facing))
 
-    def getBullets(self):
-        return self.bullets
-
     @property
     def mesh(self):
         return [(self.x+7, self.x+24), (self.y, self.y+31)]
 
-#    def meshMaker(self, x, y):
-#        return [(x+7, x+24), (y, y+31)]
-
-    def collision_adjust(self, above=False, right=False,
-                         below=False, left=False):
-        if above and (right or left):
-            self.y_vel -= AGENT_SPEED
-            self.x_vel = 0
-        elif left and above:
-            self.x_vel += AGENT_SPEED
-            self.y_vel = 0
-        elif right and above:
-            self.x_vel -= AGENT_SPEED
-            self.y_vel = 0
+    @property
+    def has_enemy_treasure(self):
+        return [i for i in self.picked_up
+                if isinstance(i, Treasure) and i.team != self.team]
 
 
 class Bullet:

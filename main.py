@@ -1,7 +1,7 @@
 import pyxel
 
-from Agent import Agent
-from objects import Crate
+from agent import Agent
+from items import Crate, Treasure
 
 from pirates_server.client import Client
 from pirates_server.socket_threads import GetFromThread, SendToThread
@@ -19,7 +19,7 @@ SCREEN_Y = 115
 class App(Client):
 
     def __init__(self):
-        pyxel.init(250, 153, caption="Pirats vs Cowboys")
+        pyxel.init(250, 153, caption="Pirates vs Cowboys")
         pyxel.image(0).load(0, 0, "assets/cowboys/cowboy1_standing.png")
         pyxel.image(0).load(32, 0, "assets/cowboys/cowboy1_left.png")
         pyxel.image(0).load(64, 0, "assets/cowboys/cowboy1_right.png")
@@ -43,6 +43,8 @@ class App(Client):
         self.player_address = self.get_update(socket)["player_address"]
         self.players = self.wait_for_game(socket)
         self.crates = [Crate(250 + 75, 125), Crate(300 + 75, 125)]
+        self.treasures = [Treasure("cowboys", 100, 125),
+                          Treasure("pirates", 150, 125)]
         self.pos = self.players[self.player_address]
         self.get_from = GetFromThread(socket)
         self.send_to = SendToThread(socket)
@@ -81,8 +83,12 @@ class App(Client):
             player_address = instruction.pop("player_address")
             self.execute_remote_instruction(player_address, **instruction)
         for player in self.players.values():
+            if player.won:
+                self.player_won(player)
             for crate in self.crates:
                 crate.collision(player)
+            for treasure in self.treasures:
+                treasure.collision(player)
             if player is self.pos:
                 continue
             elif not player.has_moved:
@@ -100,10 +106,8 @@ class App(Client):
         player = self.players[player_address]
         player.fire_bullet()
 
-    def player_won(self, player_address, **kwargs):
-        winning_player = self.players[player_address]
-        winning_team = winning_player.team
-        print("{} won!".format(winning_team))
+    def player_won(self, player):
+        print("{} won!".format(player.team))
 
     def check_quit(self, move):
         if move["method"] == "player_quit":
@@ -148,12 +152,11 @@ class App(Client):
             else:
                 pyxel.blt(SCREEN_X + diff, player.y,
                           *self.cowboy1_standing, 7)
-        bullets = player.getBullets()
-        for bullet in bullets:
+        for bullet in player.bullets:
             pyxel.circ(bullet.inital_x+bullet.x, bullet.inital_y, 1, 0)
             bullet.x += bullet.speed
             if -100 > bullet.x or bullet.x > 100:
-                bullets.remove(bullet)
+                player.bullets.remove(bullet)
                 del bullet
 
     def drawShipAssets(self):
@@ -163,6 +166,11 @@ class App(Client):
                 # print("diff: {0}".format(diff))
                 pyxel.blt(SCREEN_X + diff, testCrate.y,
                           2, 0, 0, 31, 31, 7)
+        for treasure in self.treasures:
+            diff = treasure.x - self.pos.x
+            if 125 > diff and -125 < diff:
+                pyxel.rect(SCREEN_X + diff - 5, treasure.y,
+                           SCREEN_X + diff - 5, treasure.y + 10, 3)
 
     def drawHealth(self):
         pyxel.rect(10, 10, 10 + self.pos.health, 20, 8)
