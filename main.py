@@ -12,8 +12,11 @@ HOST = "localhost"
 PORT = 5000
 
 
+SCREEN_X = 125
+SCREEN_Y = 115
+
+
 class App(Client):
-    testCrates = [Crate(250 + 75, 125), Crate(300 + 75, 125)]
 
     def __init__(self):
         pyxel.init(250, 153, caption="Pirats vs Cowboys")
@@ -39,6 +42,7 @@ class App(Client):
         socket = self.get_socket(HOST, game_server_port)
         self.player_address = self.get_update(socket)["player_address"]
         self.players = self.wait_for_game(socket)
+        self.crates = [Crate(250 + 75, 125), Crate(300 + 75, 125)]
         self.pos = self.players[self.player_address]
         self.get_from = GetFromThread(socket)
         self.send_to = SendToThread(socket)
@@ -63,7 +67,7 @@ class App(Client):
         return player_agents
 
     def drawBackGroung(self, row):
-        diff_x = (self.pos.x-self.pos.screen_x) % 255
+        diff_x = (self.pos.x - SCREEN_X) % 255
         left = (diff_x) % 51
         for i in range(0, 6):
             col = (51*i+diff_x) % 255
@@ -77,8 +81,8 @@ class App(Client):
             player_address = instruction.pop("player_address")
             self.execute_remote_instruction(player_address, **instruction)
         for player in self.players.values():
-            for testCrate in self.testCrates:
-                self.collistion(testCrate, player)
+            for crate in self.crates:
+                crate.collision(player)
             if player is self.pos:
                 continue
             elif not player.has_moved:
@@ -87,7 +91,6 @@ class App(Client):
         move = self.pos.get_move()
         self.send_to.put(move)
         self.check_quit(move)
-
 
     def player_moved(self, player_address, **kwargs):
         player = self.players[player_address]
@@ -119,35 +122,31 @@ class App(Client):
         for row in range(0, 2):
             self.drawBackGroung(row)
         for player in self.players.values():
-            if player is self.pos:
-                # self.draw_player(self.player)
-                pass
-            else:
-                self.draw_player(player)
+            self.draw_player(player)
         self.drawHealth()
         self.drawShipAssets()
         self.drawShip(2)
-        pyxel.rectb(self.pos.mesh[0][0], self.pos.mesh[1][0],
-                    self.pos.mesh[0][1], self.pos.mesh[1][1], 14)
-        for testCrate in self.testCrates:
-            pyxel.rectb(testCrate.mesh[0][0], testCrate.mesh[1][0],
-                        testCrate.mesh[0][1], testCrate.mesh[1][1], 14)
+#        pyxel.rectb(self.pos.mesh[0][0], self.pos.mesh[1][0],
+#                    self.pos.mesh[0][1], self.pos.mesh[1][1], 14)
+#        for create in self.crates:
+#            pyxel.rectb(crate.mesh[0][0], crate.mesh[1][0],
+#                        .mesh[0][1], testCrate.mesh[1][1], 14)
 
     def draw_player(self, player):
-        print("on screen S:{0} A:{1}".format(player.x, self.pos.x))
+        # print("on screen S:{0} A:{1}".format(player.x, self.pos.x))
         diff = player.x - self.pos.x
         if diff > -125 and diff < 125:
             if player.x_vel*10 > 1:
-                pyxel.blt(self.pos.screen_x + diff, player.screen_y,
+                pyxel.blt(SCREEN_X + diff, player.y,
                           *self.cowboy1_right, 7)
             elif player.x_vel*10 < -1:
-                pyxel.blt(self.pos.screen_x + diff, player.screen_y,
+                pyxel.blt(SCREEN_X + diff, player.y,
                           *self.cowboy1_left, 7)
             elif player.y_vel*30 > -1:
-                pyxel.blt(self.pos.screen_x + diff, player.screen_y,
+                pyxel.blt(SCREEN_X + diff, player.y,
                           *self.cowboy1_up, 7)
             else:
-                pyxel.blt(self.pos.screen_x + diff, player.screen_y,
+                pyxel.blt(SCREEN_X + diff, player.y,
                           *self.cowboy1_standing, 7)
         bullets = player.getBullets()
         for bullet in bullets:
@@ -157,29 +156,13 @@ class App(Client):
                 bullets.remove(bullet)
                 del bullet
 
-    def collistion(self, obj, agnet):
-        LEFT = (obj.mesh[0][1] > agnet.mesh[0][0] and
-                obj.mesh[0][0] < agnet.mesh[0][0])
-        RIGHT = (obj.mesh[0][1] > agnet.mesh[0][1] and
-                 obj.mesh[0][0] < agnet.mesh[0][1])
-        ABOVE = obj.mesh[1][0] < agnet.mesh[1][1]
-        if RIGHT and ABOVE:
-            agnet.collistionAdj(4)
-        if LEFT and ABOVE:
-            agnet.collistionAdj(3)
-        if ABOVE and (RIGHT or LEFT):
-            agnet.collistionAdj(2)
-
-        pass
-
     def drawShipAssets(self):
-        for testCrate in self.testCrates:
+        for testCrate in self.crates:
             diff = testCrate.x - self.pos.x
             if 125 > diff and -125 < diff:
-                print("diff: {0}".format(diff))
-                pyxel.blt(self.pos.screen_x + diff, testCrate.y,
+                # print("diff: {0}".format(diff))
+                pyxel.blt(SCREEN_X + diff, testCrate.y,
                           2, 0, 0, 31, 31, 7)
-
 
     def drawHealth(self):
         pyxel.rect(10, 10, 10 + self.pos.health, 20, 8)
@@ -187,7 +170,7 @@ class App(Client):
         pyxel.text(65, 10, "Health", 5)
 
     def drawShip(self, row):
-        diff_x = (self.pos.x-self.pos.screen_x) % 255
+        diff_x = (self.pos.x - SCREEN_X) % 255
         for i in range(0, 6):
             col = (51*i+diff_x) % 255
             if i == 0:

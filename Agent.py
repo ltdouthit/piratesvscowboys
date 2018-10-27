@@ -5,22 +5,23 @@ BULLET_SPEED = 2
 ARENA_SIZE = [0, 1000]
 AGENT_SPEED = 4
 
+SCREEN_X = 125
+SCREEN_Y = 115
+
 
 class Agent:
 
     def __init__(self, player_address, x=None, y=None, team=None):
         self.x = x
-        self.y = y
+        self.y = y + SCREEN_Y
         self.team = team
         self.player_address = player_address
         self.x_vel = 0
         self.y_vel = 0
-        self.screen_x = 125
-        self.screen_y = 115
         self.facing = 0
         self.bullets = []
         self.health = 30  # 50 Max Health
-        self.mesh = self.meshMaker(self.x, self.screen_y)
+        # self.mesh = self.meshMaker(self.x, self.screen_y)
         self.has_moved = False
 
     def get_move(self):
@@ -60,36 +61,41 @@ class Agent:
             self.x_vel += AGENT_SPEED
         if self.x > ARENA_SIZE[1]:
             self.x_vel -= AGENT_SPEED
-        if self.screen_y > 120:
+        if self.y > 120:
             self.y_vel += -1
-        if self.screen_y < -10:
-            self.screen_y = 0
+        if self.y < -10:
+            # self.screen_y = 0
             self.y_vel = 0
         self.x += self.x_vel
-        self.screen_y += self.y_vel + 3
-        self.x_vel = 0  # self.x_vel*0.9
-        self.y_vel = self.y_vel*0.9
-        self.mesh = self.meshMaker(self.screen_x, self.screen_y)
+        self.y += self.y_vel + 3
+        # self.screen_y += self.y_vel + 3
+        self.x_vel = self.x_vel * 0.9
+        self.y_vel = self.y_vel * 0.9
+        # self.mesh = self.meshMaker(self.screen_x, self.screen_y)
 
     def fire_bullet(self):
-        self.bullets.append(Bullet(self.screen_x+16, self.screen_y+8,
-                                   self.facing))
+        if len(self.bullets) < MAX_BULLETS:
+            self.bullets.append(Bullet(self.x + 16, self.y + 8, self.facing))
 
     def getBullets(self):
         return self.bullets
 
-    def meshMaker(self, x, y):
-        return [(x+7, x+24), (y, y+31)]
+    @property
+    def mesh(self):
+        return [(self.x+7, self.x+24), (self.y, self.y+31)]
 
-    def collistionAdj(self, dir):
-        # 1=Up, 2=Down, 3=Left, 4=Right
-        if dir == 2:
+#    def meshMaker(self, x, y):
+#        return [(x+7, x+24), (y, y+31)]
+
+    def collision_adjust(self, above=False, right=False,
+                         below=False, left=False):
+        if above and (right or left):
             self.y_vel -= AGENT_SPEED
             self.x_vel = 0
-        elif dir == 3:
+        elif left and above:
             self.x_vel += AGENT_SPEED
             self.y_vel = 0
-        elif dir == 4:
+        elif right and above:
             self.x_vel -= AGENT_SPEED
             self.y_vel = 0
 
