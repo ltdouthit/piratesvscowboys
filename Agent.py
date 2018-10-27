@@ -85,7 +85,7 @@ class Agent:
         # 1=Up, 2=Down, 3=Left, 4=Right
         if dir == 2:
             self.y_vel -= AGENT_SPEED
-            self.x_vel = self.x_vel*0.05
+            self.x_vel = 0
         elif dir == 3:
             self.x_vel += AGENT_SPEED
             self.y_vel = 0

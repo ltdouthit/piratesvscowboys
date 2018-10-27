@@ -77,16 +77,17 @@ class App(Client):
             player_address = instruction.pop("player_address")
             self.execute_remote_instruction(player_address, **instruction)
         for player in self.players.values():
+            for testCrate in self.testCrates:
+                self.collistion(testCrate, player)
             if player is self.pos:
                 continue
             elif not player.has_moved:
                 player.move()
-            player.has_moved = False
+                player.has_moved = False
         move = self.pos.get_move()
         self.send_to.put(move)
         self.check_quit(move)
-        for testCrate in self.testCrates:
-            self.collistion(testCrate, self.pos)
+
 
     def player_moved(self, player_address, **kwargs):
         player = self.players[player_address]
@@ -134,7 +135,7 @@ class App(Client):
 
     def draw_player(self, player):
         print("on screen S:{0} A:{1}".format(player.x, self.pos.x))
-        if player.x < self.pos.x - 200 and player.x < self.pos.x + 200:
+        if player.x > self.pos.x - 125 and player.x < self.pos.x + 125:
             diff = player.x - self.pos.x
             if player.x_vel*10 > 1:
                 pyxel.blt(self.pos.screen_x + diff, player.screen_y,
@@ -143,10 +144,10 @@ class App(Client):
                 pyxel.blt(self.pos.screen_x + diff, player.screen_y,
                           *self.cowboy1_left, 7)
             elif player.y_vel*30 > -1:
-                pyxel.blt(self.pos.x + diff, player.screen_y,
+                pyxel.blt(self.pos.screen_x + diff, player.screen_y,
                           *self.cowboy1_up, 7)
             else:
-                pyxel.blt(self.pos.x + diff, player.screen_y,
+                pyxel.blt(self.pos.screen_x + diff, player.screen_y,
                           *self.cowboy1_standing, 7)
         bullets = player.getBullets()
         for bullet in bullets:
@@ -172,12 +173,13 @@ class App(Client):
         pass
 
     def drawShipAssets(self):
-        for testCrate in self.testCrates:
-            testCrate.meshMaker(testCrate.x - self.pos.x, testCrate.y)
-            if self.pos.x < testCrate.x + 125:
-                pyxel.blt(testCrate.x - self.pos.x, testCrate.y,
-                          2, 0, 0, 31, 31, 7)
-            pass
+        for player in self.players.values():
+            for testCrate in self.testCrates:
+                testCrate.meshMaker(testCrate.x - player.x, testCrate.y)
+                if self.pos.x < testCrate.x + 125 and self.pos.x > testCrate.x - 125:
+                    pyxel.blt(testCrate.x - self.pos.x, testCrate.y,
+                              2, 0, 0, 31, 31, 7)
+                pass
 
     def drawHealth(self):
         pyxel.rect(10, 10, 10 + self.pos.health, 20, 8)
