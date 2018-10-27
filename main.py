@@ -83,7 +83,7 @@ class App(Client):
                 continue
             elif not player.has_moved:
                 player.move()
-                player.has_moved = False
+            player.has_moved = False
         move = self.pos.get_move()
         self.send_to.put(move)
         self.check_quit(move)
@@ -135,8 +135,8 @@ class App(Client):
 
     def draw_player(self, player):
         print("on screen S:{0} A:{1}".format(player.x, self.pos.x))
-        if player.x > self.pos.x - 125 and player.x < self.pos.x + 125:
-            diff = player.x - self.pos.x
+        diff = player.x - self.pos.x
+        if diff > -125 and diff < 125:
             if player.x_vel*10 > 1:
                 pyxel.blt(self.pos.screen_x + diff, player.screen_y,
                           *self.cowboy1_right, 7)
@@ -173,13 +173,13 @@ class App(Client):
         pass
 
     def drawShipAssets(self):
-        for player in self.players.values():
-            for testCrate in self.testCrates:
-                testCrate.meshMaker(testCrate.x - player.x, testCrate.y)
-                if self.pos.x < testCrate.x + 125 and self.pos.x > testCrate.x - 125:
-                    pyxel.blt(testCrate.x - self.pos.x, testCrate.y,
-                              2, 0, 0, 31, 31, 7)
-                pass
+        for testCrate in self.testCrates:
+            diff = testCrate.x - self.pos.x
+            if 125 > diff and -125 < diff:
+                print("diff: {0}".format(diff))
+                pyxel.blt(self.pos.screen_x + diff, testCrate.y,
+                          2, 0, 0, 31, 31, 7)
+
 
     def drawHealth(self):
         pyxel.rect(10, 10, 10 + self.pos.health, 20, 8)
