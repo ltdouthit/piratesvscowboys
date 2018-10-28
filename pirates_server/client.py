@@ -1,9 +1,9 @@
 import socket
 
-from .traffic import HandleTraffic
+from .traffic import GetTraffic
 
 
-class Client(HandleTraffic):
+class Client(GetTraffic):
 
     def get_socket(self, host, port):
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
