@@ -85,8 +85,11 @@ class App(Client):
             if player.won:
                 self.player_won(player)
             for item in self.items:
-                item.move()
+                if not item.active:
+                    del item
+                    continue
                 item.check_collision(player)
+                item.move()
             player.has_moved = False
 
     def get_keyboard_move(self):
@@ -155,7 +158,8 @@ class App(Client):
         self.draw_ship(2)
         self.draw_health()
         for item in self.items:
-            self.draw_item(item)
+            if item.active:
+                self.draw_item(item)
         for player in self.players.values():
             self.draw_item(player)
 

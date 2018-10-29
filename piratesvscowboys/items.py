@@ -156,17 +156,27 @@ class Bullet(Item):
             self.speed = BULLET_SPEED
         else:
             self.speed = -BULLET_SPEED
+        self.last_x = self.x
         self.team = team
         self.mesh_offset = (5, 5, 5, 5)
         self.render_method = "circ"
         self.image_data = (1, 0)
 
     def move(self):
+        self.last_x = self.x
         self.x += self.speed
-        if - 100 > self.x or self.x > 100:
+        if abs(self.x) > 100:
             self.active = False
         self.has_moved = True
 
-    def item_collided(self, agent):
-        self.agent.health -= 10
+    def check_collision(self, agent):
+        if agent.team == self.team:
+            return
+        bullet_diff = abs(self.x - self.last_x)
+        player_diff = abs(agent.x - self.x)
+        if abs(player_diff - bullet_diff) < 5 and abs(agent.y - self.y) < 15:
+            self.item_collided(agent)
+
+    def item_collided(self, agent, **kwargs):
+        agent.health -= 10
         self.active = False
